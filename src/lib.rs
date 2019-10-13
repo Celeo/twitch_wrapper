@@ -1,4 +1,6 @@
 //! Rust wrappers for the Twitch API.
+//!
+//! https://dev.twitch.tv/docs/api/reference
 
 // #![warn(missing_docs)]
 
@@ -7,6 +9,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Client,
 };
+use std::str::FromStr;
 
 mod models;
 
@@ -45,7 +48,7 @@ impl Twitch {
     fn get_headers(&self) -> HeaderMap {
         let mut map = HeaderMap::new();
         map.insert(
-            HeaderName::from_lowercase(b"client-id").unwrap(),
+            HeaderName::from_str("client-id").unwrap(),
             HeaderValue::from_bytes(self.client_id.as_bytes()).unwrap(),
         );
         map
@@ -57,7 +60,7 @@ impl Twitch {
             .client
             .get(&format!("{}/streams", self.base_url()))
             .headers(self.get_headers())
-            .query(&[("first", &format!("{}", count))]) // TODO
+            .query(&[("first", &format!("{}", count))]) // TODO actually support pagination
             .send()?;
         if !resp.status().is_success() {
             anyhow::bail!("Received error status code from API: {}", resp.status());

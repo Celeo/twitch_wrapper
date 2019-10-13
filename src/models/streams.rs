@@ -1,10 +1,5 @@
+use super::Pagination;
 use serde::{Deserialize, Serialize};
-
-/// Struct to hold the pagination information.
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Pagination {
-    cursor: String,
-}
 
 /// An item in the list of streams.
 #[derive(Debug, Deserialize, Serialize)]

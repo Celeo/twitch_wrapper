@@ -2,7 +2,13 @@
 
 // #![warn(missing_docs)]
 
-use reqwest::Client;
+use anyhow::Result;
+use reqwest::{
+    header::{HeaderMap, HeaderName, HeaderValue},
+    Client,
+};
+
+mod models;
 
 // Main API wrapper.
 pub struct Twitch {
@@ -28,12 +34,35 @@ impl Twitch {
     }
 
     /// Get the base REST API URL.
-    ///
-    /// Supports local unit testing through mockito.
     fn base_url(&self) -> String {
         #[cfg(not(test))]
         return "https://api.twitch.tv/helix".to_owned();
         #[cfg(test)]
         return mockito::server_url();
+    }
+
+    /// Populate a map of the required headers.
+    fn get_headers(&self) -> HeaderMap {
+        let mut map = HeaderMap::new();
+        map.insert(
+            HeaderName::from_lowercase(b"client-id").unwrap(),
+            HeaderValue::from_bytes(self.client_id.as_bytes()).unwrap(),
+        );
+        map
+    }
+
+    /// Get the top streams.
+    pub fn get_streams(&self, count: u64) -> Result<models::streams::StreamList> {
+        let mut resp = self
+            .client
+            .get(&format!("{}/streams", self.base_url()))
+            .headers(self.get_headers())
+            .query(&[("first", &format!("{}", count))]) // TODO
+            .send()?;
+        if !resp.status().is_success() {
+            anyhow::bail!("Received error status code from API: {}", resp.status());
+        }
+        let resp: models::streams::StreamList = resp.json()?;
+        Ok(resp)
     }
 }

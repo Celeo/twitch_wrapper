@@ -19,20 +19,10 @@ exclude = [
 circle-ci = { repository = "https://github.com/Celeo/twitch_wrapper", branch = "master" }
 maintenance = { status = "experimental" }
 
-[lib]
-name = "twitch_wrapper"
-path = "src/lib.rs"
-
-[[bin]]
-name = "twitch_wrapper_bin"
-path = "src/bin.rs"
-
 [dependencies]
 anyhow = "1.0.12"
-env_logger = "0.7.0"
-kankyo = "0.3"
 log = "0.4.8"
-oauth2 = "1.3.0"
+# oauth2 = "1.3.0"
 reqwest = "0.9.20"
 serde = { version = "1.0.101", features = ["derive"] }
 serde_json = "1.0.40"

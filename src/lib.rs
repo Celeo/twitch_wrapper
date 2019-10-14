@@ -18,6 +18,7 @@
 #![warn(missing_docs)]
 
 use anyhow::Result;
+use log::debug;
 use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
     Client, Method,
@@ -99,6 +100,10 @@ impl Twitch {
         endpoint: &str,
         query: Option<&[(&str, &str)]>,
     ) -> Result<T> {
+        debug!(
+            "Making API request: method = {}, endpoint = {}, query = {:?}",
+            method, endpoint, query
+        );
         let req = self
             .client
             .request(
@@ -112,7 +117,13 @@ impl Twitch {
         };
         let mut resp = req.send()?;
         if !resp.status().is_success() {
-            anyhow::bail!("Received status code from API: {}", resp.status());
+            anyhow::bail!(
+                "Received status code {} from API: method = {}, endpoint = {}, query = {:?}",
+                resp.status(),
+                method,
+                endpoint,
+                query
+            );
         }
         let resp: T = resp.json()?;
         Ok(resp)
@@ -162,15 +173,25 @@ impl Twitch {
         count: u64,
     ) -> Result<Vec<T>> {
         let pages_to_request = (count as f64 / endpoint_maximum as f64).ceil() as u64;
+        debug!("Starting paginated: method = {}, endpoint = {}, query = {:?}, endpoint_maximum = {}, count = {}, pages_to_request = {}",
+            method,
+            endpoint,
+            query,
+            endpoint_maximum,
+            count,
+            pages_to_request
+        );
         let mut items = vec![];
         let mut after = String::new();
         for i in 0..pages_to_request {
-            let req_count = if i + 1 == pages_to_request {
-                count - items.len() as u64
-            } else {
-                endpoint_maximum
-            };
-            let req_count = format!("{}", req_count);
+            let req_count = format!(
+                "{}",
+                if i + 1 == pages_to_request {
+                    count - items.len() as u64
+                } else {
+                    endpoint_maximum
+                }
+            );
             let mut all_query: Vec<(&str, &str)> = vec![];
             if let Some(q) = query {
                 for pair in q {
@@ -207,5 +228,80 @@ impl Twitch {
     pub fn get_streams(&self, count: u64) -> Result<Vec<models::streams::StreamListItem>> {
         let data = self.query_paginated("GET", "streams", None, 100, count)?;
         Ok(data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Twitch;
+    use mockito::mock;
+    use serde::Deserialize;
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct SampleResponse {
+        message: String,
+        value: i64,
+    }
+
+    #[test]
+    fn test_query() {
+        let t = Twitch::new("abc");
+        let _m = mock("GET", "/endpoint")
+            .match_header("client-id", "abc")
+            .with_body(r#"{"message": "hello world", "value": -100}"#)
+            .create();
+        let resp: SampleResponse = t.query("GET", "endpoint", None).unwrap();
+
+        assert_eq!(resp.message, "hello world");
+        assert_eq!(resp.value, -100);
+        _m.assert();
+    }
+
+    #[test]
+    fn test_query_paginated() {
+        let t = Twitch::new("abc");
+        let _m1 = mock("GET", "/endpoint?first=2&after=")
+            .match_header("client-id", "abc")
+            .with_body(r#"{"data": [ {"message": "first call", "value": 1}, {"message": "second call", "value": 2} ], "pagination": { "cursor": "abc" }}"#)
+            .create();
+        let _m2 = mock("GET", "/endpoint?first=2&after=abc")
+            .match_header("client-id", "abc")
+            .with_body(r#"{"data": [ {"message": "third call", "value": 3}, {"message": "fourth call", "value": 4} ], "pagination": { "cursor": "def" }}"#)
+            .create();
+        let _m3 = mock("GET", "/endpoint?first=1&after=def")
+            .match_header("client-id", "abc")
+            .with_body(r#"{"data": [ {"message": "fifth call", "value": 5}, {"message": "sixth call", "value": 6} ], "pagination": { "cursor": "ghi" }}"#)
+            .create();
+        let resp: Vec<SampleResponse> = t.query_paginated("GET", "endpoint", None, 2, 5).unwrap();
+        let expected: Vec<SampleResponse> = vec![
+            SampleResponse {
+                message: String::from("first call"),
+                value: 1,
+            },
+            SampleResponse {
+                message: String::from("second call"),
+                value: 2,
+            },
+            SampleResponse {
+                message: String::from("third call"),
+                value: 3,
+            },
+            SampleResponse {
+                message: String::from("fourth call"),
+                value: 4,
+            },
+            SampleResponse {
+                message: String::from("fifth call"),
+                value: 5,
+            },
+            SampleResponse {
+                message: String::from("sixth call"),
+                value: 6,
+            },
+        ];
+        assert_eq!(expected, resp);
+        _m1.assert();
+        _m2.assert();
+        _m3.assert();
     }
 }

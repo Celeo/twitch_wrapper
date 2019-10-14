@@ -229,6 +229,136 @@ impl Twitch {
         let data = self.query_paginated("GET", "streams", None, 100, count)?;
         Ok(data)
     }
+
+    /// Get the top streams by game_id.
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - how many to retrieve
+    /// * `game_ids` - which game ids to search by
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use twitch_wrapper::Twitch;
+    /// # let twitch = Twitch::new("abc");
+    /// let streams = twitch.get_streams_by_game_id(24, vec![1, 2, 3]).unwrap();
+    /// ```
+    pub fn get_streams_by_game_id(
+        &self,
+        count: u64,
+        game_ids: Vec<u64>,
+    ) -> Result<Vec<models::streams::StreamListItem>> {
+        let data = self.query_paginated(
+            "GET",
+            "streams",
+            Some(&[(
+                "game_id",
+                &game_ids
+                    .iter()
+                    .map(|i| i.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            )]),
+            100,
+            count,
+        )?;
+        Ok(data)
+    }
+
+    /// Get the top streams by language.
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - how many to retrieve
+    /// * `languages` - which game ids to search by
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use twitch_wrapper::Twitch;
+    /// # let twitch = Twitch::new("abc");
+    /// let streams = twitch.get_streams_by_language(24, vec!["en", "de"]).unwrap();
+    /// ```
+    pub fn get_streams_by_language(
+        &self,
+        count: u64,
+        languages: Vec<&str>,
+    ) -> Result<Vec<models::streams::StreamListItem>> {
+        let data = self.query_paginated(
+            "GET",
+            "streams",
+            Some(&[("language", &languages.join(","))]),
+            100,
+            count,
+        )?;
+        Ok(data)
+    }
+
+    /// Get the top streams by user_id.
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - how many to retrieve
+    /// * `user_ids` - which game ids to search by
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use twitch_wrapper::Twitch;
+    /// # let twitch = Twitch::new("abc");
+    /// let streams = twitch.get_streams_by_user_id(24, vec![1, 2, 3]).unwrap();
+    /// ```
+    pub fn get_streams_by_user_id(
+        &self,
+        count: u64,
+        user_ids: Vec<u64>,
+    ) -> Result<Vec<models::streams::StreamListItem>> {
+        let data = self.query_paginated(
+            "GET",
+            "streams",
+            Some(&[(
+                "user_id",
+                &user_ids
+                    .iter()
+                    .map(|i| i.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+            )]),
+            100,
+            count,
+        )?;
+        Ok(data)
+    }
+
+    /// Get the top streams by user_login.
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - how many to retrieve
+    /// * `user_logins` - which game ids to search by
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// # use twitch_wrapper::Twitch;
+    /// # let twitch = Twitch::new("abc");
+    /// let streams = twitch.get_streams_by_user_login(24, vec!["someone", "someone_else"]).unwrap();
+    /// ```
+    pub fn get_streams_by_user_login(
+        &self,
+        count: u64,
+        user_logins: Vec<&str>,
+    ) -> Result<Vec<models::streams::StreamListItem>> {
+        let data = self.query_paginated(
+            "GET",
+            "streams",
+            Some(&[("user_login", &user_logins.join(","))]),
+            100,
+            count,
+        )?;
+        Ok(data)
+    }
 }
 
 #[cfg(test)]
